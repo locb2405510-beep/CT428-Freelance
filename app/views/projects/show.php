@@ -33,6 +33,68 @@ $actionForm = function (string $route, int $id, string $label, string $confirm, 
       <p class="wl-desc mb-0"><?= e($project['MoTa']) ?></p>
     </section>
 
+    <?php if (!$isOwner): ?>
+    <?php $open = wl_is_open_for_proposals($project); ?>
+    <section class="wl-card" aria-labelledby="gui-de-xuat">
+      <?php if (!empty($myProposal)): ?>
+        <h2 class="wl-card__title" id="gui-de-xuat">Đề xuất của bạn</h2>
+        <article class="wl-proposal<?= $myProposal['TrangThai'] === 'duoc_chon' ? ' wl-proposal--chosen' : '' ?>">
+          <div class="wl-proposal__head">
+            <span class="wl-proposal__name">Đã gửi ngày <?= e(wl_date($myProposal['NgayTao'])) ?></span>
+            <?= wl_badge('proposal', $myProposal['TrangThai']) ?>
+          </div>
+          <p class="wl-proposal__meta">
+            <span>Chi phí <strong><?= e(wl_money($myProposal['ChiPhiDeXuat'])) ?></strong></span>
+            <span>Thời gian <strong><?= (int) $myProposal['ThoiGianThucHien'] ?> ngày</strong></span>
+          </p>
+          <p class="wl-proposal__body"><?= e($myProposal['NoiDung']) ?></p>
+          <?php if ($myProposal['TrangThai'] === 'cho_duyet' && $status === 'mo'): ?>
+            <div class="wl-actions">
+              <a class="btn btn-outline-primary" href="<?= e(url('proposal/mine') . '#dx-' . (int) $myProposal['ID']) ?>">Sửa đề xuất</a>
+              <form action="<?= e(url('proposal/withdraw')) ?>" method="post" data-ajax data-danger data-confirm="Rút đề xuất này? Đề xuất sẽ bị xóa." data-confirm-ok="Rút đề xuất" novalidate>
+                <input type="hidden" name="csrf" value="<?= e(Csrf::token()) ?>">
+                <input type="hidden" name="id" value="<?= (int) $myProposal['ID'] ?>">
+                <div class="form-alert d-none" role="alert"></div>
+                <button type="submit" class="btn btn-danger-soft">Rút đề xuất</button>
+              </form>
+            </div>
+          <?php endif; ?>
+        </article>
+      <?php else: ?>
+        <h2 class="wl-card__title" id="gui-de-xuat">Gửi đề xuất</h2>
+        <?php if (!$canPropose): ?>
+          <div class="alert alert-secondary" role="status">
+            <?= $status !== 'mo' ? 'Dự án này không còn nhận đề xuất.' : 'Dự án đã hết hạn nhận đề xuất.' ?>
+          </div>
+        <?php endif; ?>
+        <form action="<?= e(url('proposal/store')) ?>" method="post" data-ajax novalidate>
+          <input type="hidden" name="csrf" value="<?= e(Csrf::token()) ?>">
+          <input type="hidden" name="id_duan" value="<?= (int) $project['ID'] ?>">
+          <div class="form-alert d-none" role="alert"></div>
+          <fieldset<?= $canPropose ? '' : ' disabled' ?>>
+            <div class="row g-3 mb-3">
+              <div class="col-sm-6">
+                <label for="chiphi" class="form-label">Chi phí đề xuất (VNĐ)</label>
+                <input type="number" class="form-control" id="chiphi" name="chiphi" min="1" step="1" inputmode="numeric" required data-money-preview="chiphi-preview">
+                <div class="wl-money-preview" id="chiphi-preview" aria-live="polite"></div>
+              </div>
+              <div class="col-sm-6">
+                <label for="thoigian" class="form-label">Thời gian thực hiện (ngày)</label>
+                <input type="number" class="form-control" id="thoigian" name="thoigian" min="1" max="365" step="1" inputmode="numeric" required>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="noidung" class="form-label">Nội dung đề xuất</label>
+              <textarea class="form-control" id="noidung" name="noidung" rows="5" minlength="20" required aria-describedby="noidung-help"></textarea>
+              <div id="noidung-help" class="form-text">Từ 20 ký tự. Giới thiệu kinh nghiệm và cách bạn sẽ thực hiện.</div>
+            </div>
+            <button type="submit" class="btn btn-primary">Gửi đề xuất</button>
+          </fieldset>
+        </form>
+      <?php endif; ?>
+    </section>
+    <?php endif; ?>
+
     <?php if ($isOwner): ?>
     <section class="wl-card" aria-labelledby="de-xuat">
       <h2 class="wl-card__title" id="de-xuat">Đề xuất nhận được (<?= count($proposals) ?>)</h2>

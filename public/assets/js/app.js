@@ -219,6 +219,24 @@
     }
   });
 
+  /* ---------- Điền sẵn dữ liệu vào modal (nút có data-fill-<tên trường>) ---------- */
+  document.addEventListener('show.bs.modal', function (e) {
+    var trigger = e.relatedTarget, modalNode = e.target;
+    if (!trigger || !trigger.attributes) { return; }
+    var form = modalNode.querySelector('form');
+    if (!form) { return; }
+    hideAlert(form);
+    clearFieldErrors(form);
+    Array.prototype.forEach.call(trigger.attributes, function (attr) {
+      if (attr.name.indexOf('data-fill-') !== 0) { return; }
+      var field = form.elements[attr.name.slice(10)];
+      if (field) { field.value = attr.value; }
+    });
+    form.querySelectorAll('[data-money-preview]').forEach(function (el) {
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  });
+
   /* ---------- Hiện hoặc ẩn khối theo vai trò đã chọn ---------- */
   function syncRoleBlocks(scope) {
     scope.querySelectorAll('[data-show-role]').forEach(function (block) {
