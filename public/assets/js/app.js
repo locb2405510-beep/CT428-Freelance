@@ -240,5 +240,207 @@
     });
   });
 
+  /* ---------- Tìm dự án (project/index): lọc bằng AJAX ---------- */
+  function initSearch() {
+    var form = document.getElementById('wl-search');
+    if (!form) { return; }
+    var endpoint = form.getAttribute('data-endpoint');
+    var detailUrl = form.getAttribute('data-detail');
+    var box = document.getElementById('wl-results');
+    var info = document.getElementById('wl-result-info');
+    var pager = document.getElementById('wl-search-pager');
+    var fields = ['q', 'min', 'max', 'kynang', 'sort'];
+    var timer = null, ticket = 0, page = 1;
+
+    function el(tag, cls, text) {
+      var n = document.createElement(tag);
+      if (cls) { n.className = cls; }
+      if (text !== undefined) { n.textContent = text; }
+      return n;
+    }
+    function clear(node) { while (node.firstChild) { node.removeChild(node.firstChild); } }
+    function money(n) { return formatMoney(parseInt(n, 10) || 0); }
+    function date(s) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; }
+
+    function params(p) {
+      var q = new URLSearchParams();
+      fields.forEach(function (f) {
+        var v = (form.elements[f].value || '').trim();
+        if (v !== '' && !(f === 'sort' && v === 'newest')) { q.set(f, v); }
+      });
+      if (p > 1) { q.set('page', p); }
+      return q;
+    }
+
+    function showSkeleton() {
+      clear(box);
+      box.setAttribute('aria-busy', 'true');
+      for (var i = 0; i < 3; i++) { box.appendChild(el('div', 'wl-skeleton mb-3')); }
+    }
+
+    function renderEmpty() {
+      clear(box);
+      var wrap = el('div', 'wl-empty');
+      wrap.setAttribute('role', 'status');
+      wrap.appendChild(el('p', 'wl-empty__title', 'Không tìm thấy dự án phù hợp'));
+      wrap.appendChild(el('p', 'wl-empty__text', 'Thử đổi từ khóa, nới khoảng ngân sách hoặc bỏ bớt bộ lọc.'));
+      var btn = el('button', 'btn btn-outline-primary', 'Xóa bộ lọc');
+      btn.type = 'button';
+      btn.addEventListener('click', resetFilters);
+      wrap.appendChild(btn);
+      box.appendChild(wrap);
+    }
+
+    function renderError(message) {
+      clear(box);
+      var wrap = el('div', 'alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-2');
+      wrap.setAttribute('role', 'alert');
+      wrap.appendChild(el('span', '', message));
+      var btn = el('button', 'btn btn-sm btn-outline-secondary', 'Thử lại');
+      btn.type = 'button';
+      btn.addEventListener('click', function () { load(page); });
+      wrap.appendChild(btn);
+      box.appendChild(wrap);
+      info.textContent = '';
+      clear(pager);
+    }
+
+    function card(it) {
+      var li = el('li', 'wl-item');
+      var main = el('div', 'wl-item__main');
+      var h = el('h2', 'wl-item__title');
+      var a = el('a', '', it.TieuDe);
+      a.href = detailUrl + '?id=' + encodeURIComponent(it.ID);
+      h.appendChild(a);
+      main.appendChild(h);
+      var meta = el('p', 'wl-item__meta');
+      [['Ngân sách ', money(it.NganSach)], ['Hạn nhận đề xuất ', date(it.HanNhanDeXuat)], ['Khách hàng ', it.TenKhachHang || '']].forEach(function (pair) {
+        var span = el('span', '', pair[0]);
+        span.appendChild(el('strong', '', pair[1]));
+        meta.appendChild(span);
+      });
+      main.appendChild(meta);
+      var skills = (it.KyNang || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+      if (skills.length) {
+        var ul = el('ul', 'wl-chips');
+        ul.setAttribute('aria-label', 'Kỹ năng');
+        skills.forEach(function (sk) { ul.appendChild(el('li', 'wl-chip', sk)); });
+        main.appendChild(ul);
+      }
+      var side = el('div', 'wl-item__side');
+      side.appendChild(el('span', 'wl-muted small', (it.SoDeXuat || 0) + ' đề xuất'));
+      var go = el('a', 'btn btn-outline-primary btn-sm', 'Xem chi tiết');
+      go.href = a.href;
+      side.appendChild(go);
+      li.appendChild(main);
+      li.appendChild(side);
+      return li;
+    }
+
+    function pageBtn(label, target, opts) {
+      var li = el('li', 'page-item' + (opts.disabled ? ' disabled' : '') + (opts.active ? ' active' : ''));
+      var b = el('button', 'page-link', label);
+      b.type = 'button';
+      if (opts.active) { b.setAttribute('aria-current', 'page'); }
+      if (opts.disabled) { b.disabled = true; } else { b.addEventListener('click', function () { load(target); window.scrollTo({ top: 0, behavior: 'smooth' }); }); }
+      li.appendChild(b);
+      return li;
+    }
+
+    function renderPager(cur, totalPages, total) {
+      clear(pager);
+      if (totalPages <= 1) { return; }
+      var nav = el('nav', 'wl-pager');
+      nav.setAttribute('aria-label', 'Phân trang');
+      nav.appendChild(el('p', 'wl-pager__total', 'Tổng ' + total + ' dự án, trang ' + cur + ' / ' + totalPages));
+      var ul = el('ul', 'pagination mb-0');
+      ul.appendChild(pageBtn('Trước', cur - 1, { disabled: cur <= 1 }));
+      var shown = [], prev = 0;
+      for (var i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || Math.abs(i - cur) <= 2) { shown.push(i); }
+      }
+      shown.forEach(function (n) {
+        if (prev && n - prev > 1) { ul.appendChild(pageBtn('…', n, { disabled: true })); }
+        ul.appendChild(pageBtn(String(n), n, { active: n === cur }));
+        prev = n;
+      });
+      ul.appendChild(pageBtn('Sau', cur + 1, { disabled: cur >= totalPages }));
+      nav.appendChild(ul);
+      pager.appendChild(nav);
+    }
+
+    function load(p) {
+      var min = parseInt(form.elements.min.value, 10), max = parseInt(form.elements.max.value, 10);
+      if (min > 0 && max > 0 && min > max) {
+        renderError('Ngân sách "từ" phải nhỏ hơn hoặc bằng ngân sách "đến".');
+        return;
+      }
+      page = p;
+      var my = ++ticket;
+      var q = params(p);
+      var qs = q.toString();
+      if (window.history && history.replaceState) {
+        history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+      }
+      showSkeleton();
+      info.textContent = 'Đang tải...';
+      clear(pager);
+      fetch(endpoint + (qs ? '?' + qs : ''), {
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+      }).then(function (res) {
+        return res.json().then(function (d) { return { status: res.status, d: d }; });
+      }).then(function (r) {
+        if (my !== ticket) { return; } // đã có yêu cầu mới hơn
+        box.removeAttribute('aria-busy');
+        if (!r.d || !r.d.success) {
+          if (r.status === 401 && r.d && r.d.redirect) { window.location.href = r.d.redirect; return; }
+          renderError((r.d && r.d.message) || 'Không tải được danh sách dự án.');
+          return;
+        }
+        if (!r.d.items.length) { renderEmpty(); info.textContent = '0 dự án'; clear(pager); return; }
+        clear(box);
+        var ul = el('ul', 'wl-list');
+        r.d.items.forEach(function (it) { ul.appendChild(card(it)); });
+        box.appendChild(ul);
+        info.textContent = 'Tìm thấy ' + r.d.total + ' dự án';
+        renderPager(r.d.page, r.d.totalPages, r.d.total);
+      }).catch(function () {
+        if (my !== ticket) { return; }
+        box.removeAttribute('aria-busy');
+        renderError('Không kết nối được máy chủ. Vui lòng kiểm tra mạng và thử lại.');
+      });
+    }
+
+    function resetFilters() {
+      form.reset();
+      load(1);
+    }
+
+    // điền lại bộ lọc từ địa chỉ trang (giữ khi tải lại hoặc gửi link)
+    var initial = new URLSearchParams(window.location.search);
+    fields.forEach(function (f) { if (initial.has(f)) { form.elements[f].value = initial.get(f); } });
+
+    form.addEventListener('input', function (e) {
+      if (e.target.name === 'sort') { return; }
+      clearTimeout(timer);
+      timer = setTimeout(function () { load(1); }, 300);
+    });
+    form.addEventListener('change', function (e) {
+      if (e.target.name === 'sort') { load(1); }
+    });
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      clearTimeout(timer);
+      load(1);
+    });
+    var resetBtn = document.getElementById('wl-search-reset');
+    if (resetBtn) { resetBtn.addEventListener('click', resetFilters); }
+
+    load(parseInt(initial.get('page'), 10) || 1);
+  }
+
+  document.addEventListener('DOMContentLoaded', initSearch);
+
   window.WL = { submitAjax: submitAjax };
 })();
