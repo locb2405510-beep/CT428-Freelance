@@ -1,5 +1,5 @@
 <?php
-// Biến: $title, $project, $isOwner, $proposals, $myProposal, $canPropose
+// Biến: $title, $project, $isOwner, $proposals, $myProposal, $canPropose, $canReview, $reviewed
 $title = $title ?? $project['TieuDe'];
 $proposals = $proposals ?? [];
 $status = $project['TrangThai'];
@@ -150,6 +150,18 @@ $actionForm = function (string $route, int $id, string $label, string $confirm, 
       </dl>
     </section>
 
+    <?php if ($status === 'hoan_thanh' && (!empty($canReview) || !empty($reviewed))): ?>
+    <section class="wl-card" aria-labelledby="danh-gia">
+      <h2 class="wl-card__title" id="danh-gia">Đánh giá</h2>
+      <?php if (!empty($reviewed)): ?>
+        <p class="mb-0 wl-muted">Bạn đã đánh giá dự án này.</p>
+      <?php else: ?>
+        <p class="wl-muted">Dự án đã hoàn thành. Hãy cho biết trải nghiệm làm việc của bạn.</p>
+        <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#wl-review">Đánh giá dự án</button>
+      <?php endif; ?>
+    </section>
+    <?php endif; ?>
+
     <?php if ($isOwner): ?>
     <section class="wl-card" aria-labelledby="thao-tac">
       <h2 class="wl-card__title" id="thao-tac">Thao tác</h2>
@@ -174,4 +186,40 @@ $actionForm = function (string $route, int $id, string $label, string $confirm, 
     <?php endif; ?>
   </aside>
 </div>
+<?php if ($status === 'hoan_thanh' && !empty($canReview) && empty($reviewed)): ?>
+<div class="modal fade" id="wl-review" tabindex="-1" aria-labelledby="wl-review-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" action="<?= e(url('review/store')) ?>" method="post" data-ajax novalidate>
+      <input type="hidden" name="csrf" value="<?= e(Csrf::token()) ?>">
+      <input type="hidden" name="id_duan" value="<?= (int) $project['ID'] ?>">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="wl-review-title">Đánh giá dự án</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-alert d-none" role="alert"></div>
+        <fieldset class="mb-3">
+          <legend class="form-label fs-6">Số sao</legend>
+          <div class="wl-stars">
+            <?php for ($i = 5; $i >= 1; $i--): ?>
+              <input type="radio" name="diem" id="sao-<?= $i ?>" value="<?= $i ?>" required>
+              <label for="sao-<?= $i ?>" title="<?= $i ?> sao"><span aria-hidden="true">★</span><span class="visually-hidden"><?= $i ?> sao</span></label>
+            <?php endfor; ?>
+          </div>
+          <div class="text-danger small mt-1 d-none" data-error-for="diem"></div>
+        </fieldset>
+        <div>
+          <label for="nhanxet" class="form-label">Nhận xét <span class="wl-muted fw-normal">(không bắt buộc)</span></label>
+          <textarea class="form-control" id="nhanxet" name="nhanxet" rows="4" maxlength="500" aria-describedby="nhanxet-help"></textarea>
+          <div id="nhanxet-help" class="form-text">Tối đa 500 ký tự.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+        <button type="submit" class="btn btn-primary">Gửi đánh giá</button>
+      </div>
+    </form>
+  </div>
+</div>
+<?php endif; ?>
 <?php require APP_ROOT . '/app/views/partials/footer.php'; ?>
