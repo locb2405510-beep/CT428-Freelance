@@ -36,3 +36,7 @@ freelance-platform/
         ├── css/style.css
         └── js/app.js
 ```
+
+## Phân công giao diện
+
+Lộc phụ trách `app/views/**` và `public/assets/**`. Mọi thay đổi giao diện đi qua nhánh `feature/loc-<việc>` và Pull Request vào `develop`.
