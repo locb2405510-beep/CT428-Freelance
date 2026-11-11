@@ -62,6 +62,7 @@ $wlTitle = !empty($title) ? $title . ' | WorkLance' : 'WorkLance';
             </span>
             <form action="<?= e(url('auth/logout')) ?>" method="post" data-ajax novalidate>
               <input type="hidden" name="csrf" value="<?= e(Csrf::token()) ?>">
+              <div class="form-alert d-none" role="alert"></div>
               <button type="submit" class="btn btn-outline-secondary btn-sm">Đăng xuất</button>
             </form>
           <?php else: ?>

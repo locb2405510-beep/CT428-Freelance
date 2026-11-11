@@ -69,6 +69,8 @@ h1, h2, h3, h4, h5, h6 { text-wrap: balance; color: var(--wl-text); }
 .wl-header .nav-link { font-weight: 600; color: #3b4856; border-radius: var(--wl-radius); padding: .5rem .85rem; }
 .wl-header .nav-link:hover { color: var(--wl-primary); background: var(--wl-primary-soft); }
 .wl-header .nav-link.active { color: var(--wl-primary); background: var(--wl-primary-soft); }
+/* thông báo lỗi của form Đăng xuất nổi ở góc phải trên, không đẩy thanh điều hướng */
+.wl-header .form-alert:not(.d-none) { position: fixed; top: 4.5rem; right: 1rem; left: 1rem; max-width: 360px; margin: 0 0 0 auto; z-index: 1080; box-shadow: var(--wl-shadow); }
 .wl-user { display: inline-flex; align-items: center; gap: .5rem; font-weight: 600; font-size: .92rem; }
 .wl-avatar { width: 2rem; height: 2rem; border-radius: 50%; background: var(--wl-primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; flex: none; }
 .wl-avatar--lg { width: 4.5rem; height: 4.5rem; font-size: 1.75rem; }
