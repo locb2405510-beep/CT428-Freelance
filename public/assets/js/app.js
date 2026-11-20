@@ -137,7 +137,7 @@
     }).then(function (res) {
       return res.text().then(function (text) {
         var data = null;
-        try { data = JSON.parse(text); } catch (e) { data = null; }
+        try { data = JSON.parse(text.replace(/^\uFEFF+/, '')); } catch (e) { data = null; } // bỏ BOM đầu phản hồi nếu có
         return { status: res.status, data: data };
       });
     }).then(function (r) {
@@ -407,7 +407,11 @@
         credentials: 'same-origin',
         headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
       }).then(function (res) {
-        return res.json().then(function (d) { return { status: res.status, d: d }; });
+        return res.text().then(function (t) {
+          var d = null;
+          try { d = JSON.parse(t.replace(/^\uFEFF+/, '')); } catch (e) { d = null; } // bỏ BOM đầu phản hồi nếu có
+          return { status: res.status, d: d };
+        });
       }).then(function (r) {
         if (my !== ticket) { return; } // đã có yêu cầu mới hơn
         box.removeAttribute('aria-busy');

@@ -54,3 +54,5 @@ Mọi form ghi dữ liệu có `data-ajax`, trường ẩn `csrf` và vùng `.fo
 ## 6. Responsive
 
 Kiểm tra ở 360, 768 và 1280px: không cuộn ngang, danh sách chuyển thành một cột trên điện thoại, bộ lọc xếp dọc, thanh điều hướng thu gọn thành nút menu.
+
+Rà soát lại trên dữ liệu thật (backend `develop` b0a223a) ở 360, 768 và 1280px cho 14 màn hình của các vai trò khách, khách hàng, freelancer: không có trang nào tràn ngang.
